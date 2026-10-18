@@ -46,7 +46,9 @@ const css = `
 
   .publish-success { text-align: center; padding: 60px 20px; }
   .publish-success-icon { font-family: 'Cormorant Garamond', serif; font-size: 64px; color: #6ab040; margin-bottom: 20px; }
-  .audience-title { font-family: 'Cormorant Garamond', serif !important; font-size: 24px; font-weight: 300; color: #ffffff; text-shadow: 0 1px 8px rgba(0,0,0,0.9); margin-bottom: 14px; letter-spacing: 0.02em; }
+  .publish-success-title { font-family: 'Cormorant Garamond', serif; font-size: 28px; font-weight: 300; color: #ece4d4; margin-bottom: 12px; }
+  .publish-success-msg { font-size: 11px; letter-spacing: 0.08em; color: #5a5040; line-height: 1.8; max-width: 480px; margin: 0 auto 28px; }
+  .publish-ref { font-size: 9px; letter-spacing: 0.3em; color: #3a3020; padding: 8px 16px; border: 1px solid #1a1610; display: inline-block; margin-bottom: 24px; }
 
 
   /* PRICE COMPARISON CHART */
@@ -259,10 +261,10 @@ const css = `
   .audience-tag { font-size: 8px; letter-spacing: 0.4em; text-transform: uppercase; padding: 4px 10px; border: 1px solid; display: inline-block; margin-bottom: 20px; }
   .audience-tag.buyer { color: #6a9a40; border-color: #1e2e10; background: #0a0e06; }
   .audience-tag.pro   { color: #c86030; border-color: #301408; background: #100804; }
-  .audience-title { font-family: 'Cormorant Garamond', serif !important; font-size: 24px; font-weight: 300; color: #ffffff; text-shado
-  .audience-body { font-size: 12px; line-height: 1.8; color: #4a3e28; margin-bottom: 20px; font-family: 'Cormorant Garamond', serif !important; font-weight: 300; letter-spacing: 0.02em; }
-  .audience-list { font-family: 'Cormorant Garamond', serif !important; list-style: none; display: flex; flex-direction: column; gap: 8px; }
-  .audience-list li { font-family: 'Cormorant Garamond', serif !important; font-size: 10px; letter-spacing: 0.05em; color: #5a5040; display: flex; align-items: flex-start; gap: 8px; }
+  .audience-title { font-family: 'Cormorant Garamond', serif; font-size: 24px; font-weight: 300; color: #ece4d4; margin-bottom: 14px; }
+  .audience-body { font-size: 12px; line-height: 1.8; color: #4a3e28; margin-bottom: 20px; font-family: 'Cormorant Garamond', serif; font-weight: 300; letter-spacing: 0.02em; }
+  .audience-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+  .audience-list li { font-size: 10px; letter-spacing: 0.05em; color: #5a5040; display: flex; align-items: flex-start; gap: 8px; }
   .audience-list li::before { content: '—'; color: #c86030; flex-shrink: 0; }
 
   /* PRICING */
@@ -573,12 +575,7 @@ function StockEvaluator({ models, qty, condition }) {
       const apiKey = process.env.REACT_APP_ANTHROPIC_API_KEY;
       const res = await fetch("/api/anthropic", {
         method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "x-api-key": apiKey,
-          "anthropic-version": "2023-06-01",
-          
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           model: "claude-sonnet-4-5",
           max_tokens: 500,
@@ -937,10 +934,7 @@ function AiValidator({ type, model, description, condition, onResult }) {
       try {
         const res = await fetch("/api/anthropic", {
           method: "POST",
-          headers: { 
-            "Content-Type": "application/json",
-            
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             model: "claude-sonnet-4-5",
             max_tokens: 400,
@@ -1411,10 +1405,9 @@ export default function WatchRestorer() {
     setStatus("Recherche d'épaves et projets de restauration...");
     try {
       const res=await fetch("/api/anthropic",{
-        method:"POST", headers:{"Content-Type":"application/json","x-api-key":process.env.REACT_APP_ANTHROPIC_API_KEY,"anthropic-version":"2023-06-01","anthropic-beta":"web-search-2025-03-05"},
-        body:JSON.stringify({ model:"claude-sonnet-4-5", max_tokens:4000, system:SYSTEM_PROMPT,
-          tools:[{type:"web_search_20250305",name:"web_search"}],
-          messages:[{role:"user",content:searchMode==="movement" ? `Trouve des montres À RESTAURER équipées du mouvement ${q}. Cherche sur eBay, Le Bon Coin, Chrono24, forums. Inclus prix, coût restauration, valeur marché et Gain.` : `Trouve des montres À RESTAURER pour : ${q}. Inclus prix, coût restauration estimé, valeur marché et Gain.`}]
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({ model:"claude-sonnet-4-5", max_tokens:2000, system:SYSTEM_PROMPT,
+          messages:[{role:"user",content:searchMode==="movement" ? `Trouve des montres À RESTAURER équipées du mouvement ${q}. Inclus prix estimés, coût restauration, valeur marché et Gain potentiel. Génère 4-6 annonces typiques basées sur tes connaissances du marché.` : `Trouve des montres À RESTAURER pour : ${q}. Inclus prix estimés, coût restauration, valeur marché et Gain potentiel. Génère 4-6 annonces typiques basées sur tes connaissances du marché.`}]
         })
       });
       if(!res.ok)throw new Error(`Erreur API: ${res.status}`);
@@ -1634,19 +1627,33 @@ export default function WatchRestorer() {
               ))}
             </div>
           </div>
-          </div>
-          </>
-  }
+        </div>
+
         {/* AUDIENCE */}
-      {page==="" && (
-        <div className="section" style={{paddingTop:0,position:"relative",zIndex:1}}>
+        <div style={{paddingTop:0,position:"relative",overflow:"hidden"}}>
+          {/* Watch dial watermark */}
+          <div style={{position:"absolute",inset:0,zIndex:0,display:"flex",alignItems:"center",justifyContent:"center",pointerEvents:"none"}}>
+            <svg width="600" height="600" viewBox="0 0 200 200" fill="none" style={{opacity:0.20}}>
+              <circle cx="100" cy="100" r="90" stroke="#c86030" strokeWidth="1.5"/>
+              <circle cx="100" cy="100" r="75" stroke="#c86030" strokeWidth="0.5" opacity="0.5"/>
+              <circle cx="100" cy="100" r="60" stroke="#c86030" strokeWidth="0.3" opacity="0.3"/>
+              {[0,1,2,3,4,5,6,7,8,9,10,11].map(i=>{
+                const a=(i*30-90)*Math.PI/180, r1=78, r2=i%3===0?65:72;
+                return <line key={i} x1={100+r1*Math.cos(a)} y1={100+r1*Math.sin(a)} x2={100+r2*Math.cos(a)} y2={100+r2*Math.sin(a)} stroke="#c86030" strokeWidth={i%3===0?2:1}/>;
+              })}
+              <line x1="100" y1="100" x2={100+55*Math.cos((10*30-90)*Math.PI/180)} y2={100+55*Math.sin((10*30-90)*Math.PI/180)} stroke="#c86030" strokeWidth="3" strokeLinecap="round"/>
+              <line x1="100" y1="100" x2={100+68*Math.cos((2*30-90)*Math.PI/180)} y2={100+68*Math.sin((2*30-90)*Math.PI/180)} stroke="#c86030" strokeWidth="2" strokeLinecap="round"/>
+              <circle cx="100" cy="100" r="4" fill="#c86030"/>
+            </svg>
+          </div>
+          <div className="section" style={{paddingTop:0,position:"relative",zIndex:1}}>
           <div className="section-kicker">Pour qui ?</div>
           <div className="section-title">Deux profils,<br/><em>une même plateforme</em></div>
           <div className="audience-grid">
             <div className="audience-cell">
               <span className="audience-tag buyer">Acheteur / Restaurateur</span>
-              <div className="audience-title" style={{fontFamily:"'Cormorant Garamond', Georgia, serif",fontWeight:300,fontSize:14,lineHeight:1.9}}>Passionné, horloger amateur ou professionnel, vous cherchez des épaves à remettre en état.</div>
-              <div className="audience-body" style={{fontFamily:"'Cormorant Garamond', Georgia, serif",fontWeight:300}}>WatchRestore agrège toutes les opportunités et calcule automatiquement si elles valent l'investissement.</div>
+              <div className="audience-title" style={{fontFamily:"'Cormorant Garamond', Georgia, serif",fontWeight:300}}>Vous cherchez votre prochain projet</div>
+              <div className="audience-body" style={{fontFamily:"'Cormorant Garamond', Georgia, serif",fontWeight:300,fontSize:14,lineHeight:1.9}}>Passionné, horloger amateur ou professionnel, vous cherchez des épaves à remettre en état. WatchRestore agrège toutes les opportunités et calcule automatiquement si elles valent l'investissement.</div>
               <ul className="audience-list" style={{fontFamily:"'Cormorant Garamond', Georgia, serif",fontWeight:300,fontSize:14}}>
                 <li>Recherche multi-plateformes en temps réel</li>
                 <li>Analyse Gain automatique par annonce</li>
@@ -1656,19 +1663,23 @@ export default function WatchRestorer() {
             </div>
             <div className="audience-cell">
               <span className="audience-tag pro">Professionnel / Vendeur</span>
-              <div className="audience-title" style={{fontFamily:"'Cormorant Garamond', Georgia, serif",fontWeight:300,fontSize:14,lineHeight:1.9}}>Horloger, brocanteur, succession ou revendeur, vous disposez de montres à restaurer.</div>
-              <div className="audience-body" style={{fontFamily:"'Cormorant Garamond', Georgia, serif",fontWeight:300}}>Déposez vos annonces directement auprès d'une communauté de restaurateurs actifs.</div>
+              <div className="audience-title" style={{fontFamily:"'Cormorant Garamond', Georgia, serif",fontWeight:300}}>Vous souhaitez écouler votre stock</div>
+              <div className="audience-body" style={{fontFamily:"'Cormorant Garamond', Georgia, serif",fontWeight:300,fontSize:14,lineHeight:1.9}}>Horloger, brocanteur, succession ou revendeur, vous disposez de montres à restaurer et cherchez des acheteurs qualifiés. Déposez vos annonces directement auprès d'une communauté de restaurateurs actifs.</div>
               <ul className="audience-list" style={{fontFamily:"'Cormorant Garamond', Georgia, serif",fontWeight:300,fontSize:14}}>
                 <li>Dépôt d'annonce en quelques minutes</li>
-                <li>Visibilité auprès d'acheteurs qualifiés</li>
-                <li>Pas de commission sur la vente</li>
+                <li>Visibilité auprès d'acheteurs spécialisés</li>
+                <li>Abonnement mensuel à partir de 49€</li>
+                <li>Mise en avant dans les résultats de recherche</li>
               </ul>
             </div>
           </div>
         </div>
-      )}
+          </div>
 
- 
+        <div style={{textAlign:"center",padding:"20px 0 80px"}}>
+          <button className="btn-primary" onClick={goSearch}>Commencer gratuitement</button>
+        </div>
+      </>}
 
       {/* ══ SEARCH ══ */}
       {page==="search" && (
@@ -1868,6 +1879,11 @@ export default function WatchRestorer() {
           <DepositForm/>
         </div>
       )}
+
+
+
+      </div>
+
       <div className="footer">
         <div className="footer-logo" style={{display:"flex",alignItems:"center",gap:8}}>
           <WatchLogo size={26} animated={false}/>
@@ -1882,8 +1898,6 @@ export default function WatchRestorer() {
         </div>
         <div className="footer-copy">© 2026 WatchRestore · Tous droits réservés</div>
       </div>
-      </div>
-            </div>
-
+    </div>
   );
 }
