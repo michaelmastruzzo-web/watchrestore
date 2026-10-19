@@ -206,7 +206,7 @@ const css = `
     max-width: 520px; line-height: 1.9; margin-bottom: 44px;
     text-transform: uppercase;
   }
-  .hero-actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-bottom: 72px; }
+  .hero-actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-bottom: 72px; position: relative; z-index: 1; }
   .btn-primary {
     padding: 16px 36px; background: #c86030; border: none;
     font-family: 'DM Mono', monospace; font-size: 10px;
@@ -1459,7 +1459,7 @@ export default function WatchRestorer() {
 
           {/* Hero photo background */}
           <div style={{
-            position:"absolute",inset:0,zIndex:0,overflow:"hidden",
+            position:"absolute",inset:0,zIndex:0,overflow:"hidden",pointerEvents:"none",
           }}>
             <img
               src="https://images.unsplash.com/photo-1587836374828-4dbafa94cf0e?w=1600&q=80&auto=format&fit=crop"
