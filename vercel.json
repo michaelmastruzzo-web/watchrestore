@@ -1,6 +1,6 @@
 {
   "framework": "create-react-app",
   "functions": {
-    "api/anthropic.js": { "memory": 1024, "maxDuration": 60 }
+    "api/anthropic.js": { "maxDuration": 60 }
   }
 }
