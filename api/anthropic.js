@@ -20,7 +20,7 @@ const WEB_SEARCH_TOOL = {
   allowed_domains: [
     'ebay.fr', 'ebay.com', 'ebay.de', 'ebay.it', 'ebay.co.uk',
     'leboncoin.fr', 'chrono24.fr', 'chrono24.com', 'catawiki.com', 'catawiki.fr',
-    'delcampe.net', 'vinted.fr', 'reddit.com'
+    'delcampe.net', 'vinted.fr'
   ]
 };
 // Reprises maximum quand la recherche s'interrompt (stop_reason "pause_turn").
@@ -158,6 +158,16 @@ export default async function handler(req, res) {
 
     let response = await callApi();
     let data = await response.json();
+    // Un site peut bloquer le robot d'Anthropic : on le retire de la liste et on relance une fois.
+    const blocked = isSearch && response.status === 400 &&
+      /not accessible to our user agent: \[([^\]]*)\]/.exec(data?.error?.message || '');
+    if (blocked) {
+      const names = blocked[1].match(/[\w.-]+/g) || [];
+      console.error('Domaines bloqués retirés', names);
+      body.tools = [{ ...WEB_SEARCH_TOOL, allowed_domains: WEB_SEARCH_TOOL.allowed_domains.filter(d => !names.includes(d)) }];
+      response = await callApi();
+      data = await response.json();
+    }
     // La recherche web peut s'interrompre : on renvoie le tour en cours pour la reprendre.
     const content = [];
     for (let i = 0; response.ok && data.stop_reason === 'pause_turn' && i < MAX_CONTINUATIONS; i++) {
