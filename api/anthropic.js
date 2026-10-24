@@ -176,7 +176,14 @@ export default async function handler(req, res) {
       const text = all.slice(lastTool + 1).filter(b => b.type === 'text').map(b => b.text).join('');
       const fixed = repairListingsJson(text);
       if (fixed) {
-        data.content = [{ type: 'text', text: keepFoundUrls(fixed, collectToolUrls(all)) }];
+        const foundUrls = collectToolUrls(all);
+        console.log('Recherche', JSON.stringify({
+          stop: data.stop_reason,
+          blocs: all.map(b => b.type),
+          urlsTrouvees: foundUrls.size,
+          urlsAnnonces: JSON.parse(fixed).listings.map(l => l.url)
+        }));
+        data.content = [{ type: 'text', text: keepFoundUrls(fixed, foundUrls) }];
       } else {
         console.error('Réponse de recherche illisible', data.stop_reason, text.slice(0, 500));
       }
