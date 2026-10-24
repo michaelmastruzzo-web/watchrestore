@@ -572,12 +572,11 @@ function StockEvaluator({ models, qty, condition }) {
     if (!models || !qty) return;
     setLoading(true);
     try {
-      const apiKey = process.env.REACT_APP_ANTHROPIC_API_KEY;
       const res = await fetch("/api/anthropic", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "claude-sonnet-4-5",
+          model: "claude-sonnet-5-5",
           max_tokens: 500,
           messages: [{
             role: "user",
@@ -936,7 +935,7 @@ function AiValidator({ type, model, description, condition, onResult }) {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            model: "claude-sonnet-4-5",
+            model: "claude-sonnet-5-5",
             max_tokens: 400,
             messages: [{ role: "user", content: AI_VALIDATION_PROMPT(type, model, description, condition) }]
           })
@@ -1406,7 +1405,7 @@ export default function WatchRestorer() {
     try {
       const res=await fetch("/api/anthropic",{
         method:"POST", headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({ model:"claude-sonnet-4-5", max_tokens:2000, system:SYSTEM_PROMPT,
+        body:JSON.stringify({ model:"claude-sonnet-5-5", max_tokens:2000, system:SYSTEM_PROMPT,
           messages:[{role:"user",content:searchMode==="movement" ? `Trouve des montres À RESTAURER équipées du mouvement ${q}. Inclus prix estimés, coût restauration, valeur marché et Gain potentiel. Génère 4-6 annonces typiques basées sur tes connaissances du marché.` : `Trouve des montres À RESTAURER pour : ${q}. Inclus prix estimés, coût restauration, valeur marché et Gain potentiel. Génère 4-6 annonces typiques basées sur tes connaissances du marché.`}]
         })
       });
