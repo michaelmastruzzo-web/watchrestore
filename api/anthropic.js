@@ -1,12 +1,30 @@
 // Proxy vers l'API Anthropic pour WatchRestore
 const BREVITY = `
 
+RECHERCHE WEB (obligatoire) :
+- Utilise l'outil web_search pour trouver de VRAIES annonces actuellement en ligne.
+- N'invente jamais une annonce ni une URL : "url" doit être l'adresse exacte d'une annonce vue dans les résultats de recherche.
+- Si tu trouves moins d'annonces que demandé, renvoie seulement celles que tu as trouvées.
+
 CONTRAINTES DE LONGUEUR (obligatoires) :
-- Exactement 4 annonces dans "listings".
+- 6 annonces maximum dans "listings".
 - "synthesis" : 3 phrases maximum.
 - "description" : 20 mots maximum.
 - "works_needed" : 3 éléments maximum, quelques mots chacun.
-- JSON compact, sans backticks, sans texte avant ou après.`;
+- Réponse finale : JSON compact, sans backticks, sans texte avant ou après.`;
+
+const WEB_SEARCH_TOOL = {
+  type: 'web_search_20260209',
+  name: 'web_search',
+  max_uses: 5,
+  allowed_domains: [
+    'ebay.fr', 'ebay.com', 'ebay.de', 'ebay.it', 'ebay.co.uk',
+    'leboncoin.fr', 'chrono24.fr', 'chrono24.com', 'catawiki.com', 'catawiki.fr',
+    'delcampe.net', 'vinted.fr', 'reddit.com'
+  ]
+};
+// Reprises maximum quand la recherche s'interrompt (stop_reason "pause_turn").
+const MAX_CONTINUATIONS = 2;
 
 // Répare un JSON de recherche coupé en fin de réponse :
 // on garde les annonces complètes et on referme la structure.
@@ -31,6 +49,32 @@ function repairListingsJson(text) {
     } catch (_) {}
   }
   return null;
+}
+
+// Toutes les URL présentes dans les résultats d'outils (hors texte rédigé par le modèle).
+function collectToolUrls(content) {
+  const urls = new Set();
+  const walk = (v) => {
+    if (typeof v === 'string') {
+      for (const m of v.match(/https?:\/\/[^\s"'<>)\]]+/g) || []) urls.add(normalizeUrl(m));
+    } else if (Array.isArray(v)) v.forEach(walk);
+    else if (v && typeof v === 'object') Object.values(v).forEach(walk);
+  };
+  content.filter(b => b.type !== 'text').forEach(walk);
+  return urls;
+}
+
+function normalizeUrl(u) {
+  return u.split(/[?#]/)[0].replace(/[.,;]+$/, '').replace(/\/+$/, '').replace(/^http:/, 'https:');
+}
+
+// Retire les URL qui ne viennent pas des résultats de recherche.
+function keepFoundUrls(json, foundUrls) {
+  const parsed = JSON.parse(json);
+  for (const l of parsed.listings || []) {
+    if (typeof l.url !== 'string' || !foundUrls.has(normalizeUrl(l.url))) l.url = 'N/A';
+  }
+  return JSON.stringify(parsed);
 }
 
 // Modèle imposé côté serveur : le client ne peut pas en choisir un autre.
@@ -95,12 +139,14 @@ export default async function handler(req, res) {
     const isSearch = typeof system === 'string' && system.includes('"listings"');
     if (isSearch) {
       body.system += BREVITY;
-      body.max_tokens = 3000;
+      body.max_tokens = 8000;
+      body.tools = [WEB_SEARCH_TOOL];
+      body.output_config = { effort: 'low' };
     } else {
       body.max_tokens = Math.min(Number(req.body.max_tokens) || 1000, 2000);
     }
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const callApi = () => fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -109,13 +155,31 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify(body)
     });
-    const data = await response.json();
+
+    let response = await callApi();
+    let data = await response.json();
+    // La recherche web peut s'interrompre : on renvoie le tour en cours pour la reprendre.
+    const content = [];
+    for (let i = 0; response.ok && data.stop_reason === 'pause_turn' && i < MAX_CONTINUATIONS; i++) {
+      content.push(...data.content);
+      body.messages = [...messages, { role: 'assistant', content: [...content] }];
+      response = await callApi();
+      data = await response.json();
+    }
     if (!response.ok) console.error('Erreur Anthropic', response.status, JSON.stringify(data));
 
     if (isSearch && response.ok && Array.isArray(data.content)) {
-      const text = data.content.filter(b => b.type === 'text').map(b => b.text).join('');
+      const all = [...content, ...data.content];
+      // Le JSON final suit le dernier résultat d'outil ; le texte d'avant est du commentaire.
+      let lastTool = -1;
+      all.forEach((b, i) => { if (b.type !== 'text') lastTool = i; });
+      const text = all.slice(lastTool + 1).filter(b => b.type === 'text').map(b => b.text).join('');
       const fixed = repairListingsJson(text);
-      if (fixed) data.content = [{ type: 'text', text: fixed }];
+      if (fixed) {
+        data.content = [{ type: 'text', text: keepFoundUrls(fixed, collectToolUrls(all)) }];
+      } else {
+        console.error('Réponse de recherche illisible', data.stop_reason, text.slice(0, 500));
+      }
     }
 
     return res.status(response.status).json(data);
