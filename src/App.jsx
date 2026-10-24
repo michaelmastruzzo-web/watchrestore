@@ -1401,12 +1401,12 @@ export default function WatchRestorer() {
     const q=sq||query; if(!q.trim())return;
     setLoading(true); setError(null); setResults(null); setOpenRoi({});
     setFilter("tous"); setSort("default");
-    setStatus("Recherche d'épaves et projets de restauration...");
+    setStatus("Recherche d'annonces en ligne (jusqu'à une minute)...");
     try {
       const res=await fetch("/api/anthropic",{
         method:"POST", headers:{"Content-Type":"application/json"},
         body:JSON.stringify({ model:"claude-sonnet-5-5", max_tokens:2000, system:SYSTEM_PROMPT,
-          messages:[{role:"user",content:searchMode==="movement" ? `Trouve des montres À RESTAURER équipées du mouvement ${q}. Inclus prix estimés, coût restauration, valeur marché et Gain potentiel. Génère 4-6 annonces typiques basées sur tes connaissances du marché.` : `Trouve des montres À RESTAURER pour : ${q}. Inclus prix estimés, coût restauration, valeur marché et Gain potentiel. Génère 4-6 annonces typiques basées sur tes connaissances du marché.`}]
+          messages:[{role:"user",content:searchMode==="movement" ? `Trouve des montres À RESTAURER équipées du mouvement ${q}. Cherche sur le web de vraies annonces en ligne et indique pour chacune son prix, le coût de restauration estimé, la valeur marché et le gain potentiel.` : `Trouve des montres À RESTAURER pour : ${q}. Cherche sur le web de vraies annonces en ligne et indique pour chacune son prix, le coût de restauration estimé, la valeur marché et le gain potentiel.`}]
         })
       });
       const data=await res.json().catch(()=>({}));
