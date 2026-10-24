@@ -516,7 +516,7 @@ function parseNum(v) { if(typeof v==="number")return v; return parseFloat(String
 
 const SYSTEM_PROMPT = `Tu es un expert en restauration horlogère. Trouve EXCLUSIVEMENT des montres à restaurer : défectueuses, "pour pièces", non fonctionnelles, épaves, "spares or repair", "as found".
 
-Recherche sur : eBay ("for parts or not working"), Le Bon Coin ("pour pièces"), Chrono24, Catawiki, Delcampe, Reddit r/watchexchange.
+Recherche sur : eBay ("for parts or not working"), Le Bon Coin ("pour pièces"), Chrono24, Catawiki, Delcampe, Vinted.
 Requêtes : "[modèle] pour pièces", "[modèle] spares repair", "[modèle] restauration", "[modèle] non fonctionnel", "[modèle] as found".
 
 Niveaux : "cosmétique" / "modérée" / "complète" / "majeure"
@@ -1689,7 +1689,7 @@ export default function WatchRestorer() {
           </div>
           <div style={{marginBottom:28,padding:"16px 20px",border:"1px solid #1a1610",background:"#0b0b08",display:"flex",gap:16,alignItems:"flex-start",flexWrap:"wrap"}}>
             <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
-              {["eBay","Le Bon Coin","Chrono24","Catawiki","Watchuseek","Reddit","Delcampe"].map(s=>(
+              {["eBay","Le Bon Coin","Chrono24","Catawiki","Delcampe","Vinted"].map(s=>(
                 <span key={s} style={{fontSize:8,letterSpacing:"0.2em",textTransform:"uppercase",padding:"3px 9px",border:"1px solid #1a1610",color:"#4a3e28",background:"#080808"}}>{s}</span>
               ))}
             </div>
