@@ -33,26 +33,68 @@ function repairListingsJson(text) {
   return null;
 }
 
+// Modèle imposé côté serveur : le client ne peut pas en choisir un autre.
+const MODEL = 'claude-sonnet-5-5';
+const MAX_BODY_CHARS = 20000;
+
+// Limite best-effort par IP (mémoire de l'instance serverless).
+const RATE_WINDOW_MS = 60 * 1000;
+const RATE_MAX = 10;
+const hits = new Map();
+
+function rateLimited(ip) {
+  const now = Date.now();
+  const recent = (hits.get(ip) || []).filter(t => now - t < RATE_WINDOW_MS);
+  recent.push(now);
+  hits.set(ip, recent);
+  if (hits.size > 5000) hits.clear();
+  return recent.length > RATE_MAX;
+}
+
+// N'accepte que les appels venant du site lui-même (ou des domaines de ALLOWED_ORIGINS).
+function originAllowed(req) {
+  const origin = req.headers.origin;
+  if (!origin) return true;
+  let host;
+  try { host = new URL(origin).host; } catch (_) { return false; }
+  if (host === req.headers.host) return true;
+  const allowed = (process.env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
+  return allowed.includes(origin);
+}
+
+function validMessages(messages) {
+  return Array.isArray(messages) && messages.length > 0 && messages.length <= 4 &&
+    messages.every(m => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string');
+}
+
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (!originAllowed(req)) return res.status(403).json({ error: 'Origin not allowed' });
+
+  const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || 'unknown';
+  if (rateLimited(ip)) return res.status(429).json({ error: 'Trop de requêtes, réessayez dans une minute.' });
 
   const apiKey = process.env.ANTHROPIC_API_KEY || process.env.REACT_APP_ANTHROPIC_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'API key not configured' });
 
-  try {
-    const body = { ...req.body };
-    delete body.tools;
+  const { system, messages } = req.body || {};
+  if (!validMessages(messages) || (system !== undefined && typeof system !== 'string')) {
+    return res.status(400).json({ error: 'Requête invalide' });
+  }
+  if (JSON.stringify({ system, messages }).length > MAX_BODY_CHARS) {
+    return res.status(413).json({ error: 'Requête trop longue' });
+  }
 
-    const isSearch = typeof body.system === 'string' && body.system.includes('"listings"');
+  try {
+    const body = { model: MODEL, messages };
+    if (system) body.system = system;
+
+    const isSearch = typeof system === 'string' && system.includes('"listings"');
     if (isSearch) {
       body.system += BREVITY;
       body.max_tokens = 3000;
-    } else if (!body.max_tokens || body.max_tokens > 2000) {
-      body.max_tokens = 2000;
+    } else {
+      body.max_tokens = Math.min(Number(req.body.max_tokens) || 1000, 2000);
     }
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
