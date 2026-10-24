@@ -1409,8 +1409,8 @@ export default function WatchRestorer() {
           messages:[{role:"user",content:searchMode==="movement" ? `Trouve des montres À RESTAURER équipées du mouvement ${q}. Inclus prix estimés, coût restauration, valeur marché et Gain potentiel. Génère 4-6 annonces typiques basées sur tes connaissances du marché.` : `Trouve des montres À RESTAURER pour : ${q}. Inclus prix estimés, coût restauration, valeur marché et Gain potentiel. Génère 4-6 annonces typiques basées sur tes connaissances du marché.`}]
         })
       });
-      if(!res.ok)throw new Error(`Erreur API: ${res.status}`);
-      const data=await res.json();
+      const data=await res.json().catch(()=>({}));
+      if(!res.ok)throw new Error(`Erreur API: ${res.status}${data.error?` — ${data.error.message||data.error}`:""}`);
       setStatus("Calcul des Gain...");
       const text=data.content.filter(b=>b.type==="text").map(b=>b.text).join("");
       const match=text.match(/\{[\s\S]*"listings"[\s\S]*\}/);

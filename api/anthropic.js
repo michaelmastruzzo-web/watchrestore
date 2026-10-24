@@ -75,7 +75,10 @@ export default async function handler(req, res) {
   if (rateLimited(ip)) return res.status(429).json({ error: 'Trop de requêtes, réessayez dans une minute.' });
 
   const apiKey = process.env.ANTHROPIC_API_KEY || process.env.REACT_APP_ANTHROPIC_API_KEY;
-  if (!apiKey) return res.status(500).json({ error: 'API key not configured' });
+  if (!apiKey) {
+    console.error('ANTHROPIC_API_KEY absente de l\'environnement');
+    return res.status(500).json({ error: 'API key not configured' });
+  }
 
   const { system, messages } = req.body || {};
   if (!validMessages(messages) || (system !== undefined && typeof system !== 'string')) {
@@ -107,6 +110,7 @@ export default async function handler(req, res) {
       body: JSON.stringify(body)
     });
     const data = await response.json();
+    if (!response.ok) console.error('Erreur Anthropic', response.status, JSON.stringify(data));
 
     if (isSearch && response.ok && Array.isArray(data.content)) {
       const text = data.content.filter(b => b.type === 'text').map(b => b.text).join('');
@@ -116,6 +120,7 @@ export default async function handler(req, res) {
 
     return res.status(response.status).json(data);
   } catch (error) {
+    console.error('Erreur proxy', error);
     return res.status(500).json({ error: error.message });
   }
 }
