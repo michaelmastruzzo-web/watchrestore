@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { askClaude } from "../api";
 
 // ─── DEPOSIT LISTING FORM ────────────────────────────────────
 const LISTING_TYPES = [
@@ -35,38 +36,42 @@ Vérifie :
 }`;
 
 function AiValidator({ type, model, description, condition, onResult }) {
-  const [state, setState] = useState("idle"); // idle | checking | approved | rejected
+  const [state, setState] = useState("idle"); // idle | checking | approved | rejected | error
   const [result, setResult] = useState(null);
+  const [error, setError] = useState(null);
+  const [attempt, setAttempt] = useState(0);
 
   const onResultRef = useRef(onResult);
   onResultRef.current = onResult;
   useEffect(() => {
-    if (!model || !description || description.length < 20) return;
+    // Toute modification de l'annonce annule la validation précédente.
+    onResultRef.current(false);
+    if (!model || !description || description.length < 20) { setState("idle"); return; }
+    // Ignore la réponse d'une vérification devenue obsolète (saisie modifiée entre-temps).
+    let cancelled = false;
     const timer = setTimeout(async () => {
       setState("checking");
+      setResult(null);
       try {
-        const res = await fetch("/api/anthropic", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            model: "claude-sonnet-5-5",
-            max_tokens: 400,
-            messages: [{ role: "user", content: AI_VALIDATION_PROMPT(type, model, description, condition) }]
-          })
+        const text = await askClaude({
+          max_tokens: 400,
+          messages: [{ role: "user", content: AI_VALIDATION_PROMPT(type, model, description, condition) }]
         });
-        const data = await res.json();
-        const text = data.content.filter(b => b.type === "text").map(b => b.text).join("");
+        if (cancelled) return;
         const match = text.match(/\{[\s\S]*"approved"[\s\S]*\}/);
-        if (match) {
-          const parsed = JSON.parse(match[0]);
-          setResult(parsed);
-          setState(parsed.approved ? "approved" : "rejected");
-          onResultRef.current(parsed.approved);
-        }
-      } catch(e) { setState("idle"); }
+        if (!match) throw new Error("La réponse de validation n'a pas pu être lue.");
+        const parsed = JSON.parse(match[0]);
+        setResult(parsed);
+        setState(parsed.approved ? "approved" : "rejected");
+        onResultRef.current(!!parsed.approved);
+      } catch(e) {
+        if (cancelled) return;
+        setError(e instanceof SyntaxError ? "La réponse de validation n'a pas pu être lue." : e.message);
+        setState("error");
+      }
     }, 900);
-    return () => clearTimeout(timer);
-  }, [model, description, condition, type]);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [model, description, condition, type, attempt]);
 
   if (state === "idle") return null;
 
@@ -78,15 +83,19 @@ function AiValidator({ type, model, description, condition, onResult }) {
   ] : [];
 
   return (
-    <div className={`ai-validation ${state}`}>
+    <div className={`ai-validation ${state==="error"?"rejected":state}`}>
       <div className="ai-val-row">
-        <span className="ai-val-icon">{state==="checking"?"◌":state==="approved"?"◎":"◈"}</span>
+        <span className="ai-val-icon">{state==="checking"?"◌":state==="approved"?"◎":state==="error"?"⚠":"◈"}</span>
         <div>
-          <div className={`ai-val-text ${state==="rejected"?"rejected":""}`}>
+          <div className={`ai-val-text ${state==="rejected"||state==="error"?"rejected":""}`}>
             {state==="checking" && "Validation IA en cours..."}
             {state==="approved" && (result?.feedback || "Annonce validée — prête à être publiée.")}
             {state==="rejected" && (result?.feedback || "Cette annonce ne correspond pas aux critères de WatchRestore.")}
+            {state==="error" && `Validation indisponible — ${error}`}
           </div>
+          {state==="error" && (
+            <button onClick={()=>setAttempt(n=>n+1)} style={{marginTop:10,padding:"6px 12px",background:"transparent",border:"1px solid #3a1410",color:"#8a4030",fontFamily:"DM Mono, monospace",fontSize:9,letterSpacing:"0.2em",textTransform:"uppercase",cursor:"pointer"}}>Réessayer</button>
+          )}
           {criteria.length > 0 && (
             <div className="ai-criteria">
               {criteria.map(c => (

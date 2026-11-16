@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { askClaude } from "./api";
 import { css } from "./styles";
 import { SUGGESTIONS, MVT_SUGGESTIONS, MVT_INFO, FILTERS, SORTS, getMeta, parseNum, SYSTEM_PROMPT } from "./data";
 import { RoiPanel } from "./components/RoiPanel";
@@ -36,16 +37,10 @@ export default function WatchRestorer() {
     setFilter("tous"); setSort("default");
     setStatus("Recherche d'annonces en ligne (jusqu'à une minute)...");
     try {
-      const res=await fetch("/api/anthropic",{
-        method:"POST", headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({ model:"claude-sonnet-5-5", max_tokens:2000, system:SYSTEM_PROMPT,
-          messages:[{role:"user",content:searchMode==="movement" ? `Trouve des montres À RESTAURER équipées du mouvement ${q}. Cherche sur le web de vraies annonces en ligne et indique pour chacune son prix, le coût de restauration estimé, la valeur marché et le gain potentiel.` : `Trouve des montres À RESTAURER pour : ${q}. Cherche sur le web de vraies annonces en ligne et indique pour chacune son prix, le coût de restauration estimé, la valeur marché et le gain potentiel.`}]
-        })
+      const text=await askClaude({ max_tokens:2000, system:SYSTEM_PROMPT,
+        messages:[{role:"user",content:searchMode==="movement" ? `Trouve des montres À RESTAURER équipées du mouvement ${q}. Cherche sur le web de vraies annonces en ligne et indique pour chacune son prix, le coût de restauration estimé, la valeur marché et le gain potentiel.` : `Trouve des montres À RESTAURER pour : ${q}. Cherche sur le web de vraies annonces en ligne et indique pour chacune son prix, le coût de restauration estimé, la valeur marché et le gain potentiel.`}]
       });
-      const data=await res.json().catch(()=>({}));
-      if(!res.ok)throw new Error(`Erreur API: ${res.status}${data.error?` — ${data.error.message||data.error}`:""}`);
       setStatus("Calcul des Gain...");
-      const text=data.content.filter(b=>b.type==="text").map(b=>b.text).join("");
       const match=text.match(/\{[\s\S]*"listings"[\s\S]*\}/);
       if(!match)throw new Error("Format inattendu");
       setResults(JSON.parse(match[0]));
