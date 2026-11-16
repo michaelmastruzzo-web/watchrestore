@@ -143,7 +143,9 @@ export default async function handler(req, res) {
       body.tools = [WEB_SEARCH_TOOL];
       body.output_config = { effort: 'low' };
     } else {
-      body.max_tokens = Math.min(Number(req.body.max_tokens) || 1000, 2000);
+      // La réflexion du modèle compte dans max_tokens : une limite trop basse coupe la réponse.
+      body.max_tokens = 4000;
+      body.output_config = { effort: 'low' };
     }
 
     const callApi = () => fetch('https://api.anthropic.com/v1/messages', {
@@ -177,6 +179,9 @@ export default async function handler(req, res) {
       data = await response.json();
     }
     if (!response.ok) console.error('Erreur Anthropic', response.status, JSON.stringify(data));
+    if (response.ok && data.stop_reason !== 'end_turn') {
+      console.error('Réponse incomplète', data.stop_reason, JSON.stringify(data.usage));
+    }
 
     if (isSearch && response.ok && Array.isArray(data.content)) {
       const all = [...content, ...data.content];
