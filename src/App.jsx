@@ -7,6 +7,7 @@ import { ConsignForm } from "./components/ConsignForm";
 import { PriceChart } from "./components/PriceChart";
 import { DepositForm } from "./components/DepositForm";
 import { WatchLogo } from "./components/WatchLogo";
+import { DirectLinks } from "./components/DirectLinks";
 
 // ─── MAIN APP ────────────────────────────────────────────────
 export default function WatchRestorer() {
@@ -43,7 +44,7 @@ export default function WatchRestorer() {
       setStatus("Calcul des Gain...");
       const match=text.match(/\{[\s\S]*"listings"[\s\S]*\}/);
       if(!match)throw new Error("Format inattendu");
-      setResults(JSON.parse(match[0]));
+      setResults({...JSON.parse(match[0]), query:q});
     } catch(e){ setError(e.message||"Erreur."); }
     finally{ setLoading(false); setStatus(""); }
   };
@@ -380,6 +381,8 @@ export default function WatchRestorer() {
 
           {results && <>
             {results.synthesis && <div className="synthesis"><span className="synthesis-label">Comparatif marché · Analyse IA</span><p className="synthesis-body">{results.synthesis}</p></div>}
+            {listings.length===0 && <DirectLinks query={results.query} empty/>}
+            {listings.length>0 && <>
             <PriceChart listings={listings}/>
             <div className="filter-bar">
               <span className="filter-label">Niveau</span>
@@ -420,6 +423,8 @@ export default function WatchRestorer() {
                 </div>
               );
             })}
+            <DirectLinks query={results.query}/>
+            </>}
           </>}
 
           {!loading&&!results&&!error && <div className="empty"><div className="empty-glyph">◌</div><p className="empty-msg">Recherchez un modèle pour trouver des projets de restauration</p></div>}

@@ -2,8 +2,10 @@
 const BREVITY = `
 
 RECHERCHE WEB (obligatoire) :
-- Utilise l'outil web_search pour trouver de VRAIES annonces actuellement en ligne.
-- N'invente jamais une annonce ni une URL : "url" doit être l'adresse exacte d'une annonce vue dans les résultats de recherche.
+- Utilise l'outil web_search pour trouver de VRAIES annonces actuellement en ligne. Tu disposes de 8 recherches : varie les sites et les formulations (français et anglais), par exemple "[modèle] pour pièces", "[modèle] for parts not working", "[modèle] à restaurer".
+- Le titre, l'extrait et l'URL d'un résultat de recherche suffisent pour retenir une annonce : tu n'as pas besoin d'ouvrir la page. Déduis le prix et l'état de l'extrait ; s'il manque une information, donne ton estimation et signale-le dans "description".
+- Préfère les pages d'annonces individuelles aux pages de catégorie ou de résultats.
+- N'invente jamais une annonce ni une URL : "url" doit être l'adresse exacte d'un résultat de recherche.
 - Si tu trouves moins d'annonces que demandé, renvoie seulement celles que tu as trouvées.
 
 CONTRAINTES DE LONGUEUR (obligatoires) :
@@ -16,7 +18,7 @@ CONTRAINTES DE LONGUEUR (obligatoires) :
 const WEB_SEARCH_TOOL = {
   type: 'web_search_20260209',
   name: 'web_search',
-  max_uses: 5,
+  max_uses: 8,
   allowed_domains: [
     'ebay.fr', 'ebay.com', 'ebay.de', 'ebay.it', 'ebay.co.uk',
     'leboncoin.fr', 'chrono24.fr', 'chrono24.com', 'catawiki.com', 'catawiki.fr',
