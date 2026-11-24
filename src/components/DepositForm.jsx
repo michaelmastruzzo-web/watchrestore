@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { askClaude } from "../api";
+import { askClaude, sendForm } from "../api";
 
 // ─── DEPOSIT LISTING FORM ────────────────────────────────────
 const LISTING_TYPES = [
@@ -32,7 +32,7 @@ Vérifie :
   "description_ok": true,
   "safe": true,
   "approved": true,
-  "feedback": "Votre annonce est claire et bien ciblée — elle sera visible immédiatement."
+  "feedback": "Votre annonce est claire et bien ciblée — elle peut être envoyée."
 }`;
 
 function AiValidator({ type, model, description, condition, onResult }) {
@@ -125,16 +125,29 @@ export function DepositForm() {
     contact_pref: "email",
   });
   const set = (k, v) => setForm(f => ({...f, [k]: v}));
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState(null);
+  const canPublish = form.name && form.email && form.location && !sending;
+
+  const publish = async () => {
+    if (!canPublish) return;
+    setSending(true); setSendError(null);
+    try {
+      await sendForm("deposit", { ...form, ref });
+      setPublished(true);
+    } catch(e) { setSendError(e.message); }
+    finally { setSending(false); }
+  };
 
   if (published) return (
     <div className="publish-success">
       <div className="publish-success-icon">◎</div>
-      <div className="publish-success-title">Annonce publiée !</div>
+      <div className="publish-success-title">Annonce envoyée !</div>
       <div className="publish-ref">{ref}</div>
       <p className="publish-success-msg">
-        Votre annonce a été validée par notre IA et est désormais visible par la communauté WatchRestore.
+        Votre annonce a été validée par notre IA et transmise à l'équipe WatchRestore.
         Conservez votre référence <strong style={{color:"#c86030",fontWeight:400}}>{ref}</strong> pour toute question.
-        Vous serez contacté directement par les acheteurs intéressés.
+        Nous revenons vers vous à l'adresse <strong style={{color:"#c86030",fontWeight:400}}>{form.email}</strong>.
       </p>
       <div style={{display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap"}}>
         <span style={{fontSize:9,letterSpacing:"0.2em",textTransform:"uppercase",color:"#3a3020",padding:"8px 14px",border:"1px solid #1a1610"}}>
@@ -302,7 +315,7 @@ export function DepositForm() {
             <div style={{margin:"16px 0",padding:"12px 16px",border:"1px solid #0e1a0e",background:"#060a06",display:"flex",gap:8,alignItems:"flex-start"}}>
               <span style={{color:"#4a8a30",flexShrink:0}}>◎</span>
               <span style={{fontSize:9,letterSpacing:"0.1em",color:"#2a4020",lineHeight:1.7}}>
-                Annonce gratuite · Validée par IA · Visible immédiatement · Référence : <strong style={{color:"#4a7030",fontWeight:400}}>{ref}</strong>
+                Annonce gratuite · Validée par IA · Transmise à l'équipe · Référence : <strong style={{color:"#4a7030",fontWeight:400}}>{ref}</strong>
               </span>
             </div>
 
@@ -310,11 +323,16 @@ export function DepositForm() {
               <button onClick={()=>setStep(2)} style={{padding:"12px 20px",background:"transparent",border:"1px solid #1a1610",color:"#3a3020",fontFamily:"DM Mono, monospace",fontSize:9,letterSpacing:"0.25em",textTransform:"uppercase",cursor:"pointer"}}>
                 ← Retour
               </button>
-              <button className="form-submit" style={{flex:1,opacity:form.name&&form.email&&form.location?1:0.4,cursor:form.name&&form.email&&form.location?"pointer":"not-allowed"}}
-                onClick={()=>form.name&&form.email&&form.location?setPublished(true):null}>
-                Publier mon annonce gratuitement
+              <button className="form-submit" style={{flex:1,opacity:canPublish?1:0.4,cursor:canPublish?"pointer":"not-allowed"}}
+                onClick={publish}>
+                {sending ? "Envoi en cours..." : "Publier mon annonce gratuitement"}
               </button>
             </div>
+            {sendError && (
+              <div style={{marginTop:12,padding:"10px 14px",border:"1px solid #3a1410",background:"#0e0604",fontSize:10,letterSpacing:"0.1em",color:"#8a4030",lineHeight:1.6}}>
+                ⚠ L'annonce n'a pas été envoyée — {sendError}
+              </div>
+            )}
             <p style={{fontSize:9,letterSpacing:"0.08em",color:"#2a2018",marginTop:10,textAlign:"center",lineHeight:1.6}}>
               En publiant, vous acceptez les CGU de WatchRestore. Publication gratuite, retrait possible à tout moment sur demande.
             </p>

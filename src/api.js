@@ -18,3 +18,19 @@ export async function askClaude(body) {
   if (!Array.isArray(data.content)) throw new Error("Réponse inattendue du service.");
   return data.content.filter(b => b.type === "text").map(b => b.text).join("");
 }
+
+// Envoie un formulaire du site (dépôt d'annonce ou Espace Pro) à l'équipe par e-mail.
+export async function sendForm(kind, form) {
+  let res;
+  try {
+    res = await fetch("/api/contact", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ kind, form })
+    });
+  } catch (e) {
+    throw new Error("Connexion impossible. Vérifiez votre réseau et réessayez.");
+  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `Erreur ${res.status}`);
+}

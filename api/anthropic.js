@@ -1,4 +1,6 @@
 // Proxy vers l'API Anthropic pour WatchRestore
+import { originAllowed, clientIp, rateLimiter } from './_guard.js';
+
 const BREVITY = `
 
 RECHERCHE WEB (obligatoire) :
@@ -83,30 +85,7 @@ function keepFoundUrls(json, foundUrls) {
 const MODEL = 'claude-sonnet-5-5';
 const MAX_BODY_CHARS = 20000;
 
-// Limite best-effort par IP (mémoire de l'instance serverless).
-const RATE_WINDOW_MS = 60 * 1000;
-const RATE_MAX = 10;
-const hits = new Map();
-
-function rateLimited(ip) {
-  const now = Date.now();
-  const recent = (hits.get(ip) || []).filter(t => now - t < RATE_WINDOW_MS);
-  recent.push(now);
-  hits.set(ip, recent);
-  if (hits.size > 5000) hits.clear();
-  return recent.length > RATE_MAX;
-}
-
-// N'accepte que les appels venant du site lui-même (ou des domaines de ALLOWED_ORIGINS).
-function originAllowed(req) {
-  const origin = req.headers.origin;
-  if (!origin) return true;
-  let host;
-  try { host = new URL(origin).host; } catch (_) { return false; }
-  if (host === req.headers.host) return true;
-  const allowed = (process.env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
-  return allowed.includes(origin);
-}
+const rateLimited = rateLimiter(10);
 
 function validMessages(messages) {
   return Array.isArray(messages) && messages.length > 0 && messages.length <= 4 &&
@@ -117,8 +96,7 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   if (!originAllowed(req)) return res.status(403).json({ error: 'Origin not allowed' });
 
-  const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || 'unknown';
-  if (rateLimited(ip)) return res.status(429).json({ error: 'Trop de requêtes, réessayez dans une minute.' });
+  if (rateLimited(clientIp(req))) return res.status(429).json({ error: 'Trop de requêtes, réessayez dans une minute.' });
 
   const apiKey = process.env.ANTHROPIC_API_KEY || process.env.REACT_APP_ANTHROPIC_API_KEY;
   if (!apiKey) {

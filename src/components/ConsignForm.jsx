@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { StockEvaluator } from "./StockEvaluator";
+import { sendForm } from "../api";
 
 // ─── CONSIGNMENT FORM ────────────────────────────────────────
 export function ConsignForm() {
@@ -11,6 +12,21 @@ export function ConsignForm() {
     storage_location:"", has_photos:"non", message:""
   });
   const set = (k,v) => setForm(f=>({...f,[k]:v}));
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState(null);
+  const missing = [["name","nom"],["email","email"],["phone","téléphone"],["stock_qty","nombre de montres"],["models","modèles"]]
+    .filter(([k]) => !String(form[k]).trim()).map(([,label]) => label);
+
+  const submit = async () => {
+    if (sending) return;
+    if (missing.length) { setSendError(`Champs obligatoires manquants : ${missing.join(", ")}.`); return; }
+    setSending(true); setSendError(null);
+    try {
+      await sendForm("consign", form);
+      setSent(true);
+    } catch(e) { setSendError(e.message); }
+    finally { setSending(false); }
+  };
 
   if (sent) return (
     <div className="form-success">
@@ -106,10 +122,14 @@ export function ConsignForm() {
 
         {evaluated && <StockEvaluator models={form.models} qty={form.stock_qty} condition={form.avg_condition}/>}
 
-        <button className="form-submit" style={{marginTop:16}}
-          onClick={()=>form.name&&form.email&&form.phone&&form.models&&form.stock_qty?setSent(true):null}>
-          Confier mon stock à WatchRestore
+        <button className="form-submit" style={{marginTop:16,opacity:sending?0.4:1}} onClick={submit}>
+          {sending ? "Envoi en cours..." : "Confier mon stock à WatchRestore"}
         </button>
+        {sendError && (
+          <div style={{marginTop:12,padding:"10px 14px",border:"1px solid #3a1410",background:"#0e0604",fontSize:10,letterSpacing:"0.1em",color:"#8a4030",lineHeight:1.6}}>
+            ⚠ {sendError}
+          </div>
+        )}
         <p style={{fontSize:9,letterSpacing:"0.1em",color:"#2a2018",marginTop:10,textAlign:"center",lineHeight:1.6}}>
           En soumettant ce formulaire, vous acceptez que WatchRestore évalue votre stock et vous contacte pour vous proposer des conditions de revente. Aucun engagement de votre part.
         </p>

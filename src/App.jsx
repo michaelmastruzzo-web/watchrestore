@@ -506,7 +506,7 @@ export default function WatchRestorer() {
           <div className="section-kicker">Particuliers · Gratuit</div>
           <div className="section-title">Publiez votre annonce,<em>contribuez à l'upcycling</em></div>
           <p style={{fontSize:12,letterSpacing:"0.06em",color:"#5a5040",lineHeight:1.85,marginBottom:44,maxWidth:620}}>
-            Vous avez une montre à restaurer, des pièces détachées ou un lot à vendre ? Publiez gratuitement en 3 minutes. Votre annonce est validée automatiquement par notre IA et visible immédiatement par notre communauté de restaurateurs.
+            Vous avez une montre à restaurer, des pièces détachées ou un lot à vendre ? Publiez gratuitement en 3 minutes. Votre annonce est validée automatiquement par notre IA puis transmise à notre équipe.
           </p>
           <DepositForm/>
         </div>
